@@ -1,0 +1,93 @@
+#include <iostream>
+#include <cstring>
+#include <set>
+
+using namespace std;
+
+struct Production {
+    char nonTerminal;
+    string body;
+};
+
+set<char> nonTerminals, terminals;
+set<char> first[26], follow[26];
+int epsilon[26];
+Production productions[20];
+int countProductions = 0;
+
+void add(char c, set<char>& s) {
+    if (!isupper(c)) s.insert(c);
+}
+
+void addArray(set<char>& s1, const set<char>& s2) {
+    s1.insert(s2.begin(), s2.end());
+}
+
+void addProduction(const string& s) {
+    nonTerminals.insert(s[0]);
+    productions[countProductions++] = {s[0], s.substr(3)};
+}
+
+void findFirst() {
+    for (int i = 0; i < countProductions; i++) {
+        int n = productions[i].nonTerminal - 'A';
+
+        if (productions[i].body[0] == '@')
+            epsilon[n] = 1;
+        else {
+            for (char c : productions[i].body) {
+                add(c, first[n]);
+                if (isupper(c)) {
+                    addArray(first[n], first[c - 'A']);
+                    if (!epsilon[c - 'A']) break;
+                } else break;
+            }
+        }
+    }
+}
+
+void findFollow() {
+    follow[0].insert('#');
+    for (int i = 0; i < countProductions; i++) {
+        for (int k = productions[i].body.size() - 1; k > 0; k--) {
+            if (isupper(productions[i].body[k])) {
+                int n = productions[i].body[k] - 'A';
+                if (productions[i].body[k + 1] == '\0') {
+                    addArray(follow[n], follow[productions[i].nonTerminal - 'A']);
+                }
+                if (isupper(productions[i].body[k + 1])) {
+                    int n1 = productions[i].body[k + 1] - 'A';
+                    addArray(follow[n], first[n1]);
+                    if (epsilon[n1]) addArray(follow[n], follow[productions[i].nonTerminal - 'A']);
+                } else {
+                    add(productions[i].body[k + 1], follow[n]);
+                }
+            }
+        }
+    }
+}
+
+void displaySets() {
+    cout << "Non-Terminal\tFirst\t\tFollow\n";
+    for (char c : nonTerminals) {
+        int n = c - 'A';
+        cout << c << "\t\t";
+        for (char f : first[n]) cout << f;
+        if (epsilon[n]) cout << "\t\t" << ((char)238);
+        cout << "\t\t";
+        for (char f : follow[n]) cout << f;
+        cout << "\n";
+    }
+}
+
+int main() {
+    cout << "Enter the productions (Type 'end' to stop):\n";
+    string s;
+    while (cin >> s && s != "end") addProduction(s);
+
+    findFirst();
+    findFollow();
+    displaySets();
+
+    return 0;
+}
